@@ -1,0 +1,12 @@
+# Python 缓存
+__pycache__/
+*.pyc
+
+# Conda 缓存
+.conda/
+
+# VS Code 配置文件
+.vscode/
+
+# 操作系统文件
+.DS_Store
