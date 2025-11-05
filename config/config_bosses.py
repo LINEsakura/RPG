@@ -8,12 +8,12 @@ from .config_globals import ATTRIBUTES, STONE_NAMES
 # --- 1. Boss 数据 ---
 # (名字, 初始血量, 属性, 报复伤害)
 BOSS_DATA = {
-    "fire_boss": (1000, "fire", 0),
-    "water_boss": (1000, "water", 0),
-    "earth_boss": (1000, "earth", 0),
-    "wind_boss": (1000, "wind", 0),
-    "light_boss": (1000, "light", 0),
-    "final_boss": (5000, "none", 10), 
+    "fire_boss": (50, "fire", 0),
+    "water_boss": (50, "water", 0),
+    "earth_boss": (50, "earth", 0),
+    "wind_boss": (50, "wind", 0),
+    "light_boss": (50, "light", 0),
+    "final_boss": (500, "none", 10), 
 }
 
 # --- 2. 掉落表 ---

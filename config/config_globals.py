@@ -11,3 +11,6 @@ MAX_WEAPON_LEVEL = 5
 # --- 2. 材料 ---
 # (从 ATTRIBUTES 动态生成)
 STONE_NAMES = [f"{attr}_stone" for attr in ATTRIBUTES] + ["common_stone"]
+
+# --- 3. 模拟设置 ---
+AGENT_MAX_STEPS = 3000

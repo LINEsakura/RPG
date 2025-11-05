@@ -32,5 +32,16 @@ UPGRADE_COSTS = {
     2: {"attribute_stone": 5}, 
     3: {"attribute_stone": 10},
     4: {"attribute_stone": 20},
-    5: {"attribute_stone": 40},
+    5: {"attribute_stone": 50},
+}
+
+# --- 4. 武器升级伤害 ---
+# {等级: 额外伤害}
+UPGRADE_DAMAGE = {
+    0: 0,  # 0 级 (没武器)
+    1: 5,  # 1 级
+    2: 10, # 2 级
+    3: 15,
+    4: 30,
+    5: 50, # 5 级
 }
