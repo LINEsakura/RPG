@@ -1,18 +1,16 @@
-# --- 1. 导入库 ---
 import gymnasium
 from gymnasium.spaces import Discrete, Dict
-from pettingzoo import ParallelEnv # (关键变化) 不再是 AECEnv
+from pettingzoo import ParallelEnv
 from pettingzoo.utils import wrappers
 import numpy as np
 import random
 import os
 
-# --- 2. 导入我们的配置文件 ---
 from config.config_globals import *
 from config.config_bosses import *
 from config.config_weapons import *
 
-class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
+class RpgEnv(ParallelEnv): # ParallelEnv
     metadata = {"render_modes": ["human"], "name": "rpg_env_v0"}
 
     def __init__(self, render_mode=None):
@@ -23,11 +21,11 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
         self.boss_names = list(BOSS_DATA.keys())
         self.weapon_names = list(WEAPON_DATA.keys())
 
-        # (新) PettingZoo Parallel API 要求
+        # PettingZoo Parallel API
         self.observation_spaces = {
             agent: Dict({
                 "my_health": Discrete(AGENT_MAX_HEALTH + 1),
-                "my_state": Discrete(2), # (新) 0 = 在世界, 1 = 在战斗
+                "my_state": Discrete(2), # 0 = 在世界, 1 = 在战斗
                 "my_inventory": Dict({stone: Discrete(100) for stone in STONE_NAMES}),
                 "my_weapons": Dict({weapon: Discrete(MAX_WEAPON_LEVEL + 1) for weapon in self.weapon_names}),
                 # (简化) agent 不再能看到所有 Boss 血量, 只能看到自己战斗中的 Boss
@@ -42,17 +40,17 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
         self.render_mode = render_mode
         self.current_step = 0
         
-        # --- (新) 我们的核心逻辑：状态机 ---
+        # --- 核心逻辑：状态机 ---
         self.agent_healths = {}
         self.agent_inventories = {}
         self.agent_weapons = {}
-        # (新) 追踪 Agent 在干什么: "WORLD" 或 "BATTLE"
+        # 追踪 Agent 在干什么: "WORLD" 或 "BATTLE"
         self.agent_states = {agent: "WORLD" for agent in self.possible_agents}
-        # (新) 追踪 Agent 的独立战斗 "副本"
+        # 追踪 Agent 的独立战斗 "副本"
         self.battle_instances = {} # e.g. {"player_0": {"type": "fire_boss", "health": 1000}}
 
     def _get_obs(self, agent):
-        """(新) ParallelEnv 的观察函数"""
+        """ParallelEnv 的观察函数"""
         battle_hp = 0
         if self.agent_states[agent] == "BATTLE":
             battle_hp = self.battle_instances[agent]["health"]
@@ -66,7 +64,7 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
         }
 
     def reset(self, seed=None, options=None):
-        # (变化) 重置所有 Agent
+        # 重置所有 Agent
         self.agents = self.possible_agents[:]
         self.agent_healths = {agent: AGENT_MAX_HEALTH for agent in self.agents}
         self.agent_inventories = {agent: {stone: 0 for stone in STONE_NAMES} for agent in self.agents}
@@ -80,9 +78,9 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
         infos = {agent: {} for agent in self.agents}
         return observations, infos
 
-    # --- (新) 请求 3 & 4：Boss 战斗的核心逻辑 ---
+    # --- Boss 战斗的核心逻辑 ---
     def _create_battle_instance(self, agent, boss_name):
-        """(新) 创建一个崭新的 '副本' Boss"""
+        """创建一个崭新的 '副本' Boss"""
         if self.agent_states[agent] == "WORLD":
             print(f"  > {agent} 开始挑战 {boss_name}!")
             self.agent_states[agent] = "BATTLE"
@@ -92,15 +90,15 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
             }
     
     def _resolve_battle_loss(self, agent):
-        """(新) Agent 死亡，满血复活，Boss 副本被删除"""
+        """Agent 死亡，满血复活，Boss 副本被删除"""
         print(f"--- {agent} 死亡! 满血复活. ---")
         self.agent_healths[agent] = AGENT_MAX_HEALTH
         self.agent_states[agent] = "WORLD"
         del self.battle_instances[agent]
-        return 0 # (请求 3) 死亡没有奖励
+        return 0 # 死亡没有奖励
         
     def _resolve_battle_win(self, agent, battle):
-        """(新) Boss 死亡，掉落，Boss 副本被删除"""
+        """Boss 死亡，掉落，Boss 副本被删除"""
         boss_name = battle["type"]
         print(f"*** {boss_name} 被 {agent} 击败! ***")
         
@@ -119,7 +117,7 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
         else:
             return 100 # 普通击杀奖励
 
-    # --- 战斗计算 (和以前一样, 只是参数变了) ---
+    # --- 战斗计算 ---
     def _roll_loot(self, boss_name):
         loot = {stone: 0 for stone in STONE_NAMES}
         for item, prob, amount in LOOT_TABLES[boss_name]:
@@ -173,8 +171,7 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
             print(f"  > {agent} 尝试升级 {weapon_name}, 但材料不足.")
             return 0 
 
-    # --- (关键变化) 并行 Step 函数 ---
-    # --- (关键变化) 并行 Step 函数 ---
+    # --- 并行 Step 函数 ---
     def step(self, actions):
         
         # ParallelEnv 接收一个动作字典, 返回四个字典
@@ -194,7 +191,7 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
 
             step_reward = 0
             
-            # (新!) 在循环开始时，我们假设 agent 这一步不会结束
+            # 在循环开始时，我们假设 agent 这一步不会结束
             terminations[agent] = False 
             
             # --- 2. 状态机：根据 Agent 在“世界”还是“战斗”中，执行不同逻辑 ---
@@ -227,10 +224,10 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
                         # --- 胜利逻辑在这里！ ---
                         step_reward = self._resolve_battle_win(agent, battle)
                         
-                        # (新!) 检查这是否是最终的胜利
+                        # 检查这是否是最终的胜利
                         if boss_name == "final_boss":
                             print(f"*** {agent} 击败了最终Boss! ***")
-                            terminations[agent] = True # (新!) 在这里设置
+                            terminations[agent] = True # 在这里设置
                     else:
                         # 2. Boss 反击 (如果会反击)
                         boss_retaliation_dmg = BOSS_DATA[boss_name][2]
@@ -243,22 +240,16 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
                 else: # Action == 0 (闲置/逃跑)
                     print(f"  > {agent} [Battle] 闲置...")
             
-            # --- 3. (旧的 240-244 行) 奖励和胜利检查 ---
-            
-            # (旧的第 241 行) 
+            # --- 3. 奖励和胜利检查 ---
             rewards[agent] = step_reward
-            
-            # (旧的第 240 和 243-246 行 - 已被删除!) 
-            # 我们把 terminations[agent] = False 移到了循环顶部
-            # 我们把 "final_boss" 胜利检查移到了 BATTLE 逻辑内部
             
         # --- 4. 检查超时 ---
         truncated = self.current_step >= AGENT_MAX_STEPS
         if truncated:
             print(f"--- 达到最大步数 {AGENT_MAX_STEPS}, 游戏超时 ---")
-            self.agents = [] # (新) 超时后, 移除所有 agents
+            self.agents = [] # 超时后, 移除所有 agents
         
-        # 5. (新) ParallelEnv: 移除 "dead" (terminated) agents
+        # 5. ParallelEnv: 移除 "dead" (terminated) agents
         for agent in list(self.agents): # (迭代一个副本)
             if terminations.get(agent, False):
                 self.agents.remove(agent)
@@ -272,26 +263,9 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
         if self.render_mode == "human":
             self.render()
 
-        # (新) ParallelEnv 返回 5 个字典
+        # ParallelEnv 返回 5 个字典
         return observations, rewards, terminations, truncations, infos
 
-    # def render(self):
-    #     if self.render_mode == "human":
-    #         print(f"--- 步骤: {self.current_step} ---")
-    #         for agent in self.possible_agents:
-    #             if agent not in self.agents: 
-    #                 print(f"  Agent: {agent} (已结束)")
-    #                 continue
-                
-    #             print(f"  Agent: {agent} (HP: {self.agent_healths[agent]}) (State: {self.agent_states[agent]})")
-    #             if self.agent_states[agent] == "BATTLE":
-    #                 battle = self.battle_instances[agent]
-    #                 print(f"    IN BATTLE vs {battle['type']} (HP: {battle['health']:.0f})")
-                
-    #             inv = {k:v for k,v in self.agent_inventories[agent].items() if v > 0}
-    #             wep = {k:v for k,v in self.agent_weapons[agent].items() if v > 0}
-    #             if inv: print(f"    Inv: {inv}")
-    #             if wep: print(f"    Wep: {wep}")
     def render(self):
         if self.render_mode == "human":
             print(f"--- 步骤: {self.current_step} ---")
@@ -313,7 +287,7 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
                 if inv: 
                     print(f"    Inv: {inv}")
                 
-                # --- (新！) 详细打印武器信息 ---
+                # --- 详细打印武器信息 ---
                 agent_weps = self.agent_weapons[agent]
                 # 检查 agent 是否至少有一把武器
                 has_weps = any(level > 0 for level in agent_weps.values())
@@ -332,4 +306,4 @@ class RpgEnv(ParallelEnv): # (关键变化) 继承 ParallelEnv
                 # --- 详细打印结束 ---
 
     def close(self):
-        pass # (日志记录功能已被移除, 你可以稍后加回来)
+        pass # 日志记录功能已被移除
